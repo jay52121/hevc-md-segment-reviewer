@@ -79,14 +79,38 @@
   .footer { color:#6e8097; font-size:11px; margin-top:15px; text-align:center; }
   @media (max-width:950px) { .main { grid-template-columns:1fr; } .right-panel { min-height:490px; max-height:none; position:static; } .segment-list { max-height:530px; } }
   @media (max-width:580px) { .shell { padding:12px; } .top { align-items:center; } .offline { display:none; } .filename { max-width:160px; } .toolbar { gap:9px; } .sep { flex-basis:100%; } .panel-title { padding:13px; } .filter-area { padding:13px; } .current-card { margin:12px; } }
-  .video-wrap { margin-inline:auto; max-width:100%; }
-  .video-wrap[data-size="half"] { width:50%; }
-  .video-wrap[data-size="window"] { width:100%; height:calc(100dvh - 190px); min-height:180px; aspect-ratio:auto; }
+  body { height:100dvh; min-height:0; overflow:hidden; }
+  .review-layout { display:grid; grid-template-columns:minmax(0,1fr) 420px; height:100dvh; }
+  .video-stage { height:100dvh; overflow:auto; background:#05080c; position:relative; }
+  .video-wrap { width:100%; height:100dvh; min-height:0; aspect-ratio:auto; margin:0; max-width:none; }
+  video { width:100%; height:100%; object-fit:contain; }
+  .review-sidebar { height:100dvh; overflow-y:auto; min-width:0; background:var(--panel); border-left:1px solid var(--line); }
+  .top { padding:20px 18px 0; margin-bottom:16px; }
+  h1 { font-size:22px; } .subtitle { font-size:12px; } .offline { display:none; }
+  .toolbar { margin:0 14px 14px; padding:12px; display:grid; grid-template-columns:auto minmax(0,1fr); }
+  .toolbar .sep { display:none; } .small-status { grid-column:1/-1; }
+  .video-info { padding:0 18px 18px; gap:16px; } .video-info .spacer { display:none; }
+  .clock { width:100%; } .size-controls { width:100%; }
+  .size-heading { display:flex; align-items:center; gap:10px; font-size:12px; }
+  #scaleValue { margin-left:auto; color:var(--accent); font-variant-numeric:tabular-nums; }
+  .fit-button { background:#243d5c; color:var(--text); border:1px solid #4b709f; border-radius:7px; padding:7px 10px; font-size:12px; }
+  .fit-button[aria-pressed="false"] { background:var(--panel2); border-color:var(--line); }
+  #videoScale { width:100%; margin:15px 0 3px; accent-color:var(--accent); cursor:ew-resize; }
+  .scale-marks { display:flex; justify-content:space-between; color:var(--muted); font-size:10px; }
+  .current-card { margin:16px; } .segment-list { min-height:120px; max-height:none; overflow:visible; }
+  .bottom-controls { position:sticky; bottom:0; } .footer { padding:10px; margin:0; }
+  @media(max-width:760px) { .review-layout { grid-template-columns:minmax(0,1fr) 300px; } h1 { font-size:18px; } .top { padding:14px 12px 0; } .toolbar { margin:0 8px 12px; } .video-info { padding-inline:12px; } .current-card { margin:10px; padding:12px; } }
+  @media(max-width:480px) { .review-layout { grid-template-columns:minmax(0,1fr) 220px; } .toolbar { grid-template-columns:1fr; } .filename { max-width:100%; } .size-heading { flex-wrap:wrap; } }
 </style>
 </head>
 <body>
-<div class="shell">
-  <header class="top">
+<main class="review-layout">
+    <section class="video-stage" aria-label="视频播放器">      <div class="video-wrap">
+        <video id="player" controls playsinline preload="metadata"></video>
+        <div class="empty-video" id="emptyVideo"><div class="play-symbol">▶</div><span>选择 HEVC 视频后在此播放</span></div>
+      </div>
+</section>
+    <aside class="review-sidebar" aria-label="审阅选项和解析">  <header class="top">
     <div>
       <div class="eyebrow">LOCAL VIDEO REVIEW</div>
       <h1>HEVC · MD 视频片段审阅器</h1>
@@ -105,19 +129,15 @@
     <span id="totalSummary" class="small-status">等待载入文件</span>
   </div>
 
-  <main class="main">
-    <section class="panel" aria-label="视频播放器">
-      <div class="panel-title"><span>视频播放</span><span class="counter" id="videoKind">本地解码</span></div>
-      <div class="video-wrap">
-        <video id="player" controls playsinline preload="metadata"></video>
-        <div class="empty-video" id="emptyVideo"><div class="play-symbol">▶</div><span>选择 HEVC 视频后在此播放</span></div>
-      </div>
       <div class="video-info">
+        <span class="counter" id="videoKind">本地解码</span>
         <div class="clock" id="clock">00:00 <span>/ --:--</span></div>
         <div class="spacer"></div>
-        <label class="checkbox-label" for="videoSize">视频尺寸
-          <select id="videoSize" class="speed-select"><option value="full">1×</option><option value="half">0.5×</option><option value="window">适应窗口高度</option></select>
-        </label>
+        <div class="size-controls">
+          <div class="size-heading"><label for="videoScale">视频尺寸</label><output id="scaleValue" for="videoScale">自适应</output><button type="button" id="fitVideo" class="fit-button" aria-pressed="true">自适应高度</button></div>
+          <input id="videoScale" type="range" min="0.25" max="1.5" step="0.05" value="1" aria-label="视频尺寸倍数">
+          <div class="scale-marks"><span>0.25×</span><span>1×</span><span>1.5×</span></div>
+        </div>
         <label class="checkbox-label"><input type="checkbox" id="autoStop" checked>片段结束自动暂停</label>
         <label class="checkbox-label" for="speed">倍速
           <select id="speed" class="speed-select">
@@ -137,9 +157,6 @@
       </div>
       <div class="guidance"><strong>使用方式：</strong>先后顺序不限，分别载入视频和带播放器 JSON 的 MD。右侧选择分类，再点时间段或按 <strong>↑ / ↓</strong> 切换上一段 / 下一段。<br><strong>HEVC 提示：</strong>浏览器必须具备原生 HEVC 解码能力；macOS 推荐 Safari。此工具不转码，部分 HEVC 封装或编码配置仍可能无法直接播放。</div>
       <div class="status" id="status" role="status">尚未加载数据。视频和 MD 均通过文件选择器本地读取，不上传网络。</div>
-    </section>
-
-    <aside class="panel right-panel" aria-label="分类和片段导航">
       <div class="panel-title"><span>分类导航</span><span class="counter" id="loadedCount">0 个片段</span></div>
       <div class="filter-area">
         <div class="filter-title"><label for="category">选择分类</label><span id="classCount">0 类</span></div>
@@ -153,10 +170,10 @@
         <button type="button" class="nav-button" id="next" disabled>↓ 下一段</button>
         <div class="nav-tip">仅在当前分类中跳转；输入框或分类下拉菜单获得焦点时不拦截方向键。</div>
       </div>
+
+      <footer class="footer">本地读取 · 无数据上传</footer>
     </aside>
   </main>
-  <footer class="footer">单文件 HTML · 无外部脚本 · 无数据上传 · 识别结果只从外部 MD 导入</footer>
-</div>
 <script>
 (() => {
   'use strict';
@@ -524,9 +541,38 @@
       ui.currentReason.textContent = '此时间点没有对应的识别记录。';
     }
   }
-  $('videoSize').addEventListener('change', () => {
-    document.querySelector('.video-wrap').dataset.size = $('videoSize').value;
+  const videoStage = document.querySelector('.video-stage');
+  const videoWrap = document.querySelector('.video-wrap');
+  const scaleInput = $('videoScale');
+  const fitButton = $('fitVideo');
+  let fitToWindow = true;
+  function updateVideoSize() {
+    const scale = Number(scaleInput.value);
+    const height = window.innerHeight;
+    const ratio = ui.player.videoWidth && ui.player.videoHeight ? ui.player.videoWidth / ui.player.videoHeight : 16 / 9;
+    if (fitToWindow) {
+      videoWrap.style.width = '100%';
+      videoWrap.style.height = height + 'px';
+      $('scaleValue').textContent = '自适应';
+    } else {
+      const baseHeight = Math.min(height, videoStage.clientWidth / ratio);
+      videoWrap.style.width = Math.round(baseHeight * ratio * scale) + 'px';
+      videoWrap.style.height = Math.round(baseHeight * scale) + 'px';
+      $('scaleValue').textContent = scale.toFixed(2).replace(/0$/, '') + '×';
+    }
+    fitButton.setAttribute('aria-pressed', String(fitToWindow));
+  }
+  scaleInput.addEventListener('input', () => { fitToWindow = false; updateVideoSize(); });
+  fitButton.addEventListener('click', () => {
+    fitToWindow = true;
+    scaleInput.value = '1';
+    videoStage.scrollTop = 0;
+    videoStage.scrollLeft = 0;
+    updateVideoSize();
   });
+  window.addEventListener('resize', updateVideoSize);
+  ui.player.addEventListener('loadedmetadata', updateVideoSize);
+  updateVideoSize();
   function updateClock() {
     const currentTime = Number.isFinite(ui.player.currentTime) ? ui.player.currentTime : 0;
     ui.clock.replaceChildren(document.createTextNode(formatTime(currentTime) + ' '));
